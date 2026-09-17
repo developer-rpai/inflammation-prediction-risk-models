@@ -1,10 +1,23 @@
-bayesian_optimization==1.2.0
-keras==2.9.0
-matplotlib==3.5.2
-numpy==1.23.1
-pandas==1.4.1
-scikit_learn==1.1.2
-scikit_optimize==0.9.0
-scipy==1.7.0
-seaborn==0.11.2
-tensorflow==2.9.1
+# Synthetic-data pipeline (current): no credentials needed.
+#   pip install -r requirements.txt
+#   python src/train.py
+pandas
+numpy
+scikit-learn
+xgboost
+pytest
+
+# Legacy MIMIC-III experiment stack (original 2022 pins, kept for reference).
+# The legacy scripts under src/experiments/ additionally reference training
+# modules (src.train_xgboost, src.train_rnn, src.models.rnn,
+# src.visualization.util) that were part of the original project setup.
+# bayesian_optimization==1.2.0
+# keras==2.9.0
+# matplotlib==3.5.2
+# numpy==1.23.1
+# pandas==1.4.1
+# scikit_learn==1.1.2
+# scikit_optimize==0.9.0
+# scipy==1.7.0
+# seaborn==0.11.2
+# tensorflow==2.9.1

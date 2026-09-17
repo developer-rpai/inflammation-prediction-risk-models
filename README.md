@@ -11,6 +11,30 @@ To determine inflammation labels, we use a modified physiological criteria on an
     * If the treatment was administered first, the sampling had to follow within 24 hours.
 * **Systemic Dysfunction**: When the SOFA score shows an increase of at least 2 points, indicating an acute inflammatory impact on organ systems.
 
+## Quickstart (synthetic data, no credentials needed)
+
+The full pipeline now runs end-to-end on **synthetic ICU data** -- no
+PhysioNet credential, no PostgreSQL, no data download. The generator produces
+hourly vital-sign and lab time series for synthetic ICU stays (44 clinical
+variables: 15 vitals + 29 labs) and labels inflammation onset with the same
+physiological logic described above (culture/antibiotic suspicion window +
+SOFA increase >= 2). The task is early prediction with a 7-hour horizon:
+given the 48 hours before a prediction time, flag inflammation 7 hours
+before onset.
+
+```bash
+pip install -r requirements.txt
+python src/train.py            # generate data, train XGBoost, print metrics
+python src/train.py --n-patients 1000 --seed 7   # bigger cohort
+pytest tests/                  # run the test suite
+```
+
+`src/train.py` accepts `--data-dir` pointing at a `cohort.parquet`/`cohort.csv`
+in the same long-format schema the generator produces
+(`patient_id, hour, <44 variables>, culture_sampled, antibiotic_given, sofa,
+onset_hour`), so the same code trains on real extracted data when available.
+Model, metrics, and feature importances are written to `output/synthetic/`.
+
 ## Data
 
 This project uses [MIMIC-III v1.4](https://physionet.org/content/mimiciii/1.4/) database with extraction and preprocessing modified scripts from [Machine Learning and Computational Biology Lab](https://github.com/BorgwardtLab/mgp-tcn). Data files are not provided, as [MIT-LCP](https://lcp.mit.edu/) requires to preserve the patients' privacy. MIMIC-III includes over 58,000 hospital admissions of over 45,000 patients, as encountered between June 2001 and October 2012.
@@ -57,7 +81,12 @@ We use 44 clinical variables: 15 vital parameters and 29 laboratory parameters. 
 4.  **Clone this repository.** To clone it from the command line, run:
   ```git clone https://github.com/developer-rpai/inflammation-prediction-risk-models.git```
 
-5.  **Run experiments.** Requires creating a folder named `input` in the base project folder. Available experiments are:
+5.  **Run experiments.** The current pipeline runs on synthetic data with no
+    setup beyond the install step (see Quickstart above):
+  ```python src/train.py```
+  The table below documents the legacy MIMIC-III experiment scripts, which
+  require creating a folder named `input` in the base project folder with
+  extracted data:
 
 | Model type | Experiment | Command |
 | :--- | :--- | :--- |
@@ -99,8 +128,11 @@ We use 44 clinical variables: 15 vital parameters and 29 laboratory parameters. 
 	│
 	├── src                                   <- Source code for use in this project.
 	│   ├── __init__.py                       <- Makes src a Python module.
+	│   ├── synthetic_data.py                 <- Synthetic ICU cohort generator (no credentials needed).
+	│   ├── preprocessing.py                  <- Time-series statistics encoding + train/val/test splits.
+	│   ├── train.py                          <- End-to-end training CLI (`python src/train.py`).
 	│   │
-	│   ├── experiments                       <- Scripts to run the performed experiments.
+	│   ├── experiments                       <- Legacy experiment scripts (MIMIC-III workflow).
 	│   │   ├── rnn_experiments.py
 	│   │   └── xgboost_experiments.py
 	│   │
@@ -118,12 +150,26 @@ We use 44 clinical variables: 15 vital parameters and 29 laboratory parameters. 
 	│   ├── visualization                     <- Scripts to create exploratory and results oriented visualizations.
 	│   │   ├── __init__.py                   <- Makes visualization a Python module.
 	│   │   ├── plots.py                      <- Plots functions used in the project.
+	│
+	├── tests                                 <- pytest suite (synthetic-data smoke tests + pipeline tests).
+	│   ├── test_synthetic.py
+	│   └── test_pipeline.py
 	│   │   └── util.py 
 	│   │
 	│   ├── train_rnn.py
 	│   └── train_xgboost.py
 	│
 	└── requirements.txt                      <- Packages required to reproduce the project's working environment.
+
+## Related projects
+
+* [SIDHA](https://github.com/developer-rpai/sidha) -- Sensor-to-Insight Data for
+  Hidradenitis suppurativa Architecture: an open reference implementation for
+  mapping episodic clinical records into continuous, research-ready
+  inflammatory-disease intelligence (EHR ingestion via CSV/FHIR R4/OMOP CDM,
+  computable clinical phenotypes, diagnostic-delay analytics, synthetic
+  datasets). This repo's synthetic-data approach to inflammation modeling
+  complements SIDHA's methods work.
 
 ## Acknowledgements
 
