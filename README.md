@@ -25,6 +25,7 @@ before onset.
 ```bash
 pip install -r requirements.txt
 python src/train.py            # generate data, train XGBoost, print metrics
+python src/train.py --model gru  # recurrent GRU on raw 48h sequences (NumPy only)
 python src/train.py --n-patients 1000 --seed 7   # bigger cohort
 pytest tests/                  # run the test suite
 ```
@@ -34,6 +35,22 @@ in the same long-format schema the generator produces
 (`patient_id, hour, <44 variables>, culture_sampled, antibiotic_given, sofa,
 onset_hour`), so the same code trains on real extracted data when available.
 Model, metrics, and feature importances are written to `output/synthetic/`.
+
+## Benchmarks (synthetic data)
+
+Reference run: 600 synthetic patients, seed 42, 7-hour prediction horizon.
+XGBoost trains on per-variable summary statistics; the GRU trains directly
+on the raw 48-hour hourly sequences (forward-filled, median-imputed,
+z-scored with training-set statistics).
+
+| Model | Test acc | Test AUROC | Test AUPRC |
+| :--- | :--- | :--- | :--- |
+| XGBoost (gradient boosting) | 0.989 | 0.997 | 0.983 |
+| GRU (NumPy, 32 hidden units) | 0.978 | 0.993 | 0.961 |
+
+The GRU is implemented from scratch in `src/gru.py` (single-layer GRU +
+sigmoid head, mini-batch Adam, BPTT) -- no deep-learning framework needed,
+so the recurrent path runs anywhere the synthetic pipeline does.
 
 ## Data
 
@@ -130,7 +147,9 @@ We use 44 clinical variables: 15 vital parameters and 29 laboratory parameters. 
 	│   ├── __init__.py                       <- Makes src a Python module.
 	│   ├── synthetic_data.py                 <- Synthetic ICU cohort generator (no credentials needed).
 	│   ├── preprocessing.py                  <- Time-series statistics encoding + train/val/test splits.
-	│   ├── train.py                          <- End-to-end training CLI (`python src/train.py`).
+	│   ├── sequences.py                      <- Raw 48h sequence builder for the recurrent path.
+	│   ├── gru.py                            <- NumPy GRU classifier (no DL framework required).
+	│   ├── train.py                          <- End-to-end training CLI (`python src/train.py`, `--model gru|xgboost`).
 	│   │
 	│   ├── experiments                       <- Legacy experiment scripts (MIMIC-III workflow).
 	│   │   ├── rnn_experiments.py
@@ -153,7 +172,8 @@ We use 44 clinical variables: 15 vital parameters and 29 laboratory parameters. 
 	│
 	├── tests                                 <- pytest suite (synthetic-data smoke tests + pipeline tests).
 	│   ├── test_synthetic.py
-	│   └── test_pipeline.py
+	│   ├── test_pipeline.py
+	│   └── test_gru.py                       <- GRU gradient check + sequence + training tests.
 	│   │   └── util.py 
 	│   │
 	│   ├── train_rnn.py

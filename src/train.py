@@ -3,6 +3,7 @@
 Usage:
     python src/train.py                      # synthetic data, default settings
     python src/train.py --n-patients 1000 --seed 7
+    python src/train.py --model gru          # recurrent (GRU) path
     python src/train.py --data-dir input/xgboost   # pre-extracted real data
 
 With --data-dir, the script expects a long-format parquet/csv with columns
@@ -10,9 +11,17 @@ patient_id, hour, the 44 clinical variables (see src/synthetic_data.py),
 and onset_hour -- i.e. the same schema generate_cohort() produces. Without
 it, a synthetic cohort is generated on the fly (no credentials needed).
 
-The model is gradient-boosted trees (XGBoost), matching the approach
-documented in the README. If xgboost is not installed, it falls back to
-scikit-learn's GradientBoostingClassifier with a warning.
+Two model families are supported:
+
+* ``xgboost`` (default): gradient-boosted trees on per-variable summary
+  statistics (count, mean, std, min, max, quartiles) over the 48-hour
+  observation window -- the same encoding documented in the README. Falls
+  back to scikit-learn's GradientBoostingClassifier when xgboost is not
+  installed.
+* ``gru``: a single-layer GRU (NumPy implementation in src/gru.py, no
+  deep-learning framework required) trained directly on the raw 48-hour
+  hourly sequences (forward-filled, median-imputed, z-scored with
+  training-set statistics).
 """
 
 from __future__ import annotations
@@ -29,6 +38,8 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.preprocessing import build_dataset, stratified_split
+from src.sequences import (build_sequences, impute_and_standardize,
+                           sequence_split)
 from src.synthetic_data import generate_cohort
 
 try:
@@ -56,8 +67,8 @@ def load_cohort(data_dir: str | None, n_patients: int, seed: int) -> pd.DataFram
     return generate_cohort(n_patients=n_patients, seed=seed)
 
 
-def train_model(X_train: pd.DataFrame, y_train: pd.Series, seed: int,
-                n_estimators: int = 300):
+def train_xgboost(X_train: pd.DataFrame, y_train: pd.Series, seed: int,
+                  n_estimators: int = 300):
     if _XGB_AVAILABLE:
         model = XGBClassifier(
             n_estimators=n_estimators, max_depth=4, learning_rate=0.05,
@@ -73,7 +84,19 @@ def train_model(X_train: pd.DataFrame, y_train: pd.Series, seed: int,
     return model
 
 
-def evaluate(model, X: pd.DataFrame, y: pd.Series) -> dict[str, float]:
+def train_gru(X_train: np.ndarray, y_train: np.ndarray,
+              X_val: np.ndarray, y_val: np.ndarray, seed: int,
+              n_hidden: int = 32, epochs: int = 15, lr: float = 3e-3,
+              batch_size: int = 64):
+    from src.gru import GRUClassifier
+    model = GRUClassifier(n_features=X_train.shape[2], n_hidden=n_hidden,
+                          seed=seed, lr=lr, epochs=epochs,
+                          batch_size=batch_size, verbose=True)
+    model.fit(X_train, y_train, X_val, y_val)
+    return model
+
+
+def evaluate(model, X, y) -> dict[str, float]:
     proba = model.predict_proba(X)[:, 1]
     pred = (proba >= 0.5).astype(int)
     out = {
@@ -81,7 +104,7 @@ def evaluate(model, X: pd.DataFrame, y: pd.Series) -> dict[str, float]:
         "auroc": float(roc_auc_score(y, proba)),
         "auprc": float(average_precision_score(y, proba)),
         "n": int(len(y)),
-        "prevalence": float(y.mean()),
+        "prevalence": float(np.asarray(y).mean()),
     }
     return out
 
@@ -93,21 +116,51 @@ def main() -> None:
     ap.add_argument("--data-dir", default=None,
                     help="Directory with cohort.parquet/csv; else synthetic.")
     ap.add_argument("--out-dir", default="output/synthetic")
-    ap.add_argument("--n-estimators", type=int, default=300)
+    ap.add_argument("--n-estimators", type=int, default=300,
+                    help="Trees for the xgboost path.")
+    ap.add_argument("--model", choices=("xgboost", "gru"), default="xgboost",
+                    help="Model family: gradient boosting or recurrent GRU.")
+    ap.add_argument("--gru-hidden", type=int, default=32)
+    ap.add_argument("--gru-epochs", type=int, default=15)
+    ap.add_argument("--gru-lr", type=float, default=3e-3)
+    ap.add_argument("--gru-batch", type=int, default=64)
     args = ap.parse_args()
 
     cohort = load_cohort(args.data_dir, args.n_patients, args.seed)
-    X, y, ids = build_dataset(cohort)
-    print(f"dataset: {X.shape[0]} patients, {X.shape[1]} features, "
-          f"case rate {y.mean():.3f}")
-    splits = stratified_split(X, y, ids, seed=args.seed)
-    X_train, y_train, _ = splits["train"]
-    X_val, y_val, _ = splits["val"]
-    X_test, y_test, _ = splits["test"]
-    print(f"split sizes: train={len(y_train)} val={len(y_val)} "
-          f"test={len(y_test)}")
 
-    model = train_model(X_train, y_train, args.seed, args.n_estimators)
+    if args.model == "gru":
+        out_subdir = os.path.join(args.out_dir, "gru")
+        X, y, ids = build_sequences(cohort, seed=args.seed)
+        print(f"dataset: {X.shape[0]} patients, {X.shape[1]}h x "
+              f"{X.shape[2]} vars sequences, case rate {y.mean():.3f}")
+        splits = sequence_split(X, y, ids, seed=args.seed)
+        (X_train, y_train, _), (X_val, y_val, _), (X_test, y_test, _) = (
+            splits["train"], splits["val"], splits["test"])
+        X_train, X_val, X_test = impute_and_standardize(X_train, X_val, X_test)
+        print(f"split sizes: train={len(y_train)} val={len(y_val)} "
+              f"test={len(y_test)}")
+        model = train_gru(X_train, y_train, X_val, y_val, args.seed,
+                          n_hidden=args.gru_hidden, epochs=args.gru_epochs,
+                          lr=args.gru_lr, batch_size=args.gru_batch)
+        model_name = (f"GRUClassifier(hidden={args.gru_hidden})")
+        importances = None
+    else:
+        out_subdir = os.path.join(args.out_dir, "xgboost")
+        X, y, ids = build_dataset(cohort)
+        print(f"dataset: {X.shape[0]} patients, {X.shape[1]} features, "
+              f"case rate {y.mean():.3f}")
+        splits = stratified_split(X, y, ids, seed=args.seed)
+        X_train, y_train, _ = splits["train"]
+        X_val, y_val, _ = splits["val"]
+        X_test, y_test, _ = splits["test"]
+        print(f"split sizes: train={len(y_train)} val={len(y_val)} "
+              f"test={len(y_test)}")
+        model = train_xgboost(X_train, y_train, args.seed, args.n_estimators)
+        model_name = type(model).__name__
+        importances = pd.DataFrame({
+            "feature": X.columns,
+            "importance": model.feature_importances_,
+        }).sort_values("importance", ascending=False)
 
     metrics = {
         "train": evaluate(model, X_train, y_train),
@@ -115,7 +168,7 @@ def main() -> None:
         "test": evaluate(model, X_test, y_test),
         "config": {"n_patients": args.n_patients, "seed": args.seed,
                    "synthetic": args.data_dir is None,
-                   "model": type(model).__name__},
+                   "model": model_name},
     }
     for split in ("train", "val", "test"):
         m = metrics[split]
@@ -123,20 +176,17 @@ def main() -> None:
               f"auroc={m['auroc']:.3f}  auprc={m['auprc']:.3f}  "
               f"(n={m['n']}, prev={m['prevalence']:.3f})")
 
-    os.makedirs(args.out_dir, exist_ok=True)
-    with open(os.path.join(args.out_dir, "metrics.json"), "w") as f:
+    os.makedirs(out_subdir, exist_ok=True)
+    with open(os.path.join(out_subdir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
-    importances = pd.DataFrame({
-        "feature": X.columns,
-        "importance": model.feature_importances_,
-    }).sort_values("importance", ascending=False)
-    importances.to_csv(os.path.join(args.out_dir, "feature_importances.csv"),
-                       index=False)
-    if _XGB_AVAILABLE:
-        model.save_model(os.path.join(args.out_dir, "model.json"))
-    print("\nTop 10 features:")
-    print(importances.head(10).to_string(index=False))
-    print(f"\nArtifacts written to {args.out_dir}/")
+    if importances is not None:
+        importances.to_csv(os.path.join(out_subdir, "feature_importances.csv"),
+                           index=False)
+        if _XGB_AVAILABLE and hasattr(model, "save_model"):
+            model.save_model(os.path.join(out_subdir, "model.json"))
+        print("\nTop 10 features:")
+        print(importances.head(10).to_string(index=False))
+    print(f"\nArtifacts written to {out_subdir}/")
 
 
 if __name__ == "__main__":
