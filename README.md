@@ -1,5 +1,11 @@
 # Early prediction of inflammation using gradient boosting and deep learning
 
+**Predicts the onset of inflammation 7 hours early from ICU vital-sign and lab
+time series** (44 clinical variables, SOFA-based onset labels). Headline
+benchmarks on 600 synthetic patients: **XGBoost test AUROC 0.997 · GRU test
+AUROC 0.993**. The full pipeline runs end-to-end on synthetic data — no
+PhysioNet credential, no PHI, no data download.
+
 Inflammation is a fundamental biological response to harmful stimuli, but when dysregulated, it can lead to severe systemic issues and organ damage. Its management is highly time-sensitive because delayed treatment can increase morbidity and healthcare costs due to escalating systemic damage.
 
 This project aims to analyze inflammation-related ICU data and predict its onset using machine learning, framing the detection as a supervised classification task. It uses time series data containing laboratory and vital parameters from patients' ICU stays.
