@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+title: "Early Prediction of Inflammation from ICU Time-Series Data"
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: Pai
+    given-names: Rakesh
+license: Apache-2.0
+repository-code: "https://github.com/developer-rpai/inflammation-prediction-risk-models"
+keywords:
+  - inflammation-prediction
+  - ICU
+  - time-series
+  - XGBoost
+  - GRU
+  - MIMIC-III
+  - synthetic-data
+  - clinical-decision-support
