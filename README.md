@@ -29,14 +29,21 @@ given the 48 hours before a prediction time, flag inflammation 7 hours
 before onset.
 
 ```bash
-pip install -r requirements.txt
-python src/train.py            # generate data, train XGBoost, print metrics
-python src/train.py --model gru  # recurrent GRU on raw 48h sequences (NumPy only)
-python src/train.py --n-patients 1000 --seed 7   # bigger cohort
-pytest tests/                  # run the test suite
+pip install inflammation-prediction-risk-models
+inflammation-train            # generate data, train XGBoost, print metrics
+inflammation-train --model gru  # recurrent GRU on raw 48h sequences (NumPy only)
+inflammation-train --n-patients 1000 --seed 7   # bigger cohort
+pytest tests/                  # run the test suite (from a source checkout)
 ```
 
-`src/train.py` accepts `--data-dir` pointing at a `cohort.parquet`/`cohort.csv`
+From source:
+
+```bash
+pip install -r requirements.txt
+python -m inflammation_risk_models.train
+```
+
+`inflammation-train` accepts `--data-dir` pointing at a `cohort.parquet`/`cohort.csv`
 in the same long-format schema the generator produces
 (`patient_id, hour, <44 variables>, culture_sampled, antibiotic_given, sofa,
 onset_hour`), so the same code trains on real extracted data when available.

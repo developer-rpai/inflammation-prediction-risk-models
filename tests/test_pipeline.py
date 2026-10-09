@@ -3,10 +3,10 @@
 import numpy as np
 import pandas as pd
 
-from src.preprocessing import (N_FEATURES, build_dataset, encode_window,
+from inflammation_risk_models.preprocessing import (N_FEATURES, build_dataset, encode_window,
                                  stratified_split)
-from src.synthetic_data import FEATURE_VARS, generate_cohort
-from src.train import evaluate, train_model
+from inflammation_risk_models.synthetic_data import FEATURE_VARS, generate_cohort
+from inflammation_risk_models.train import evaluate, train_model
 
 
 def test_encoding_shape_and_no_nans():

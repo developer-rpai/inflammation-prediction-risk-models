@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from src.synthetic_data import FEATURE_VARS, generate_cohort
+from inflammation_risk_models.synthetic_data import FEATURE_VARS, generate_cohort
 
 
 def test_schema():

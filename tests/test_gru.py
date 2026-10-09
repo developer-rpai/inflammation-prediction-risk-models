@@ -2,10 +2,10 @@
 
 import numpy as np
 
-from src.gru import GRUClassifier
-from src.sequences import (build_sequences, impute_and_standardize,
+from inflammation_risk_models.gru import GRUClassifier
+from inflammation_risk_models.sequences import (build_sequences, impute_and_standardize,
                            sequence_split)
-from src.synthetic_data import generate_cohort
+from inflammation_risk_models.synthetic_data import generate_cohort
 
 
 def _tiny_model():

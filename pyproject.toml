@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inflammation-prediction-risk-models"
+version = "0.1.0"
+description = "Early prediction of inflammation onset from ICU vital-sign and lab time series (XGBoost + GRU), with a synthetic-data pipeline that runs end to end without PHI."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Rakesh Ramakrishna Pai" }]
+keywords = ["inflammation-prediction", "ICU", "time-series", "XGBoost", "GRU", "synthetic-data", "clinical-decision-support"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "xgboost",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/developer-rpai/inflammation-prediction-risk-models"
+Repository = "https://github.com/developer-rpai/inflammation-prediction-risk-models"
+
+[project.scripts]
+inflammation-train = "inflammation_risk_models.train:main"
+
+[tool.setuptools.packages.find]
+include = ["inflammation_risk_models*"]
