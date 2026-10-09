@@ -331,6 +331,10 @@ def shared_displot(column, *args):
     plt.show()
 
 
+# Historical notebooks import this name; the implementation is shared_displot.
+shared_histplot = shared_displot
+
+
 def remove_outliers(df, column):
     '''
     Removes outliers from a given column.

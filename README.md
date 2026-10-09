@@ -65,7 +65,14 @@ The GRU is implemented from scratch in `src/gru.py` (single-layer GRU +
 sigmoid head, mini-batch Adam, BPTT) -- no deep-learning framework needed,
 so the recurrent path runs anywhere the synthetic pipeline does.
 
-## Data
+## Data in this repository
+
+Real MIMIC-III rows are not stored here. PhysioNet credentialing, the local
+path a credentialed extract should use, and the seeded mock tables are
+documented in [DATA.md](DATA.md). Exploratory notebooks read
+`data/synthetic/SYNTHETIC_*` files produced by
+`scripts/generate_synthetic_mimic.py`. Saved notebook outputs are stripped on
+commit (see `.pre-commit-config.yaml` and `.gitattributes`).
 
 This project uses [MIMIC-III v1.4](https://physionet.org/content/mimiciii/1.4/) database with extraction and preprocessing modified scripts from [Machine Learning and Computational Biology Lab](https://github.com/BorgwardtLab/mgp-tcn). Data files are not provided, as [MIT-LCP](https://lcp.mit.edu/) requires to preserve the patients' privacy. MIMIC-III includes over 58,000 hospital admissions of over 45,000 patients, as encountered between June 2001 and October 2012.
 
