@@ -61,7 +61,7 @@ z-scored with training-set statistics).
 | XGBoost (gradient boosting) | 0.989 | 0.997 | 0.983 |
 | GRU (NumPy, 32 hidden units) | 0.978 | 0.993 | 0.961 |
 
-The GRU is implemented from scratch in `src/gru.py` (single-layer GRU +
+The GRU is implemented from scratch in `inflammation_risk_models/gru.py` (single-layer GRU +
 sigmoid head, mini-batch Adam, BPTT) -- no deep-learning framework needed,
 so the recurrent path runs anywhere the synthetic pipeline does.
 
@@ -104,102 +104,65 @@ We use 44 clinical variables: 15 vital parameters and 29 laboratory parameters. 
 
 ## Usage
 
-1.  **Install dependencies.** Install by running `pip install -r requirements.txt`. Python version used is 3.8.10.
+1.  **Install.** Python >= 3.9. From a checkout, `pip install -r requirements.txt`, or install the package with `pip install inflammation-prediction-risk-models`.
 
-2.  **Install PostgreSQL locally.** See the [PostgreSQL downloads](https://www.postgresql.org/download/) page for your system. PostgreSQL v12.12 and Ubuntu 20.04.4 were used in the project.
+2.  **Train on synthetic data.** The installed command and the module entry point accept the same flags (`--model {xgboost,gru}`, `--n-patients`, `--seed`, `--data-dir`, `--out-dir`, plus the `--gru-*` and `--n-estimators` options):
 
-3.  **Accessing and building MIMIC-III.** For more details see [MIT Getting Started documentation](https://mimic.mit.edu/docs/gettingstarted/). Steps are:
-    1.  Become a credentialed user on PhysioNet.
-    2.  Complete required training.
-    3.  Sign the required data use agreement.
-    4.  Download files from the MIMIC-III website.
-    5.  Build MIMIC-III locally.
+    ```bash
+    inflammation-train
+    python -m inflammation_risk_models.train --model gru --n-patients 1000 --seed 7
+    ```
 
-4.  **Clone this repository.** To clone it from the command line, run:
-  ```git clone https://github.com/developer-rpai/inflammation-prediction-risk-models.git```
+3.  **Optional: a credentialed MIMIC-III extract.** Real MIMIC-III is not in this repository. PostgreSQL and the PhysioNet download are only needed if you build your own extract. See [DATA.md](DATA.md) and the [MIT-LCP getting started guide](https://mimic.mit.edu/docs/gettingstarted/).
 
-5.  **Run experiments.** The current pipeline runs on synthetic data with no
-    setup beyond the install step (see Quickstart above):
-  ```python src/train.py```
-  The table below documents the legacy MIMIC-III experiment scripts, which
-  require creating a folder named `input` in the base project folder with
-  extracted data:
+4.  **Clone.** `git clone https://github.com/developer-rpai/inflammation-prediction-risk-models.git`
 
-| Model type | Experiment | Command |
-| :--- | :--- | :--- |
-| Gradient boosting (XGBoost) | Tuning | `python3 ./src/experiments/xgboost_experiments.py tuning` |
-| Gradient boosting (XGBoost) | Test | `python3 ./src/experiments/xgboost_experiments.py test` |
-| Recurrent neural networks | Tuning | `python3 ./src/experiments/rnn_experiments.py tuning` |
-| Recurrent neural networks | Test | `python3 ./src/experiments/rnn_experiments.py test` |
+The legacy experiment modules do not dispatch on a `tuning` or `test` argument. Their `__main__` blocks leave the original experiment calls commented out, and those calls expect a local credentialed extract (see [DATA.md](DATA.md)):
+
+| Model type | Module |
+| :--- | :--- |
+| Gradient boosting (XGBoost) | `python -m inflammation_risk_models.experiments.xgboost_experiments` |
+| Recurrent neural networks | `python -m inflammation_risk_models.experiments.rnn_experiments` |
 
 ---
 
 ## Project structure
 
-	├── configs                               <- Configuration files for the experiments.
-	├── input                                 <- Data files used by the models.
-	│   ├── rnn
-	│   │   ├── test
-	│   │   ├── train
-	│   │   └── val
-	│   │
-	│   └── xgboost
-	│   	├── test
-	│   	├── train
-	│   	└── val
-	│
-	├── logs                                  <- TensorBoard logs.
-	│   ├── hyperparam_opt                    <- Hyperparameter tuning logs.
-	│   └── train                             <- Training logs.
-	│
-	├── models                                <- Optimal hyperparameters for the models.
-	│
-	├── notebooks                             <- Jupyter notebooks with EDA.
-	│   ├── files_preview.ipynb
-	│   ├── static_variables_eda.ipynb
-	│   └── time_series_eda.ipynb
-	│
-	├── output                                <- Output files from the tuning, training and evaluation.
-	│   ├── rnn
-	│   └── xgboost
-	│
-	├── src                                   <- Source code for use in this project.
-	│   ├── __init__.py                       <- Makes src a Python module.
-	│   ├── synthetic_data.py                 <- Synthetic ICU cohort generator (no credentials needed).
-	│   ├── preprocessing.py                  <- Time-series statistics encoding + train/val/test splits.
-	│   ├── sequences.py                      <- Raw 48h sequence builder for the recurrent path.
-	│   ├── gru.py                            <- NumPy GRU classifier (no DL framework required).
-	│   ├── train.py                          <- End-to-end training CLI (`python src/train.py`, `--model gru|xgboost`).
-	│   │
-	│   ├── experiments                       <- Legacy experiment scripts (MIMIC-III workflow).
-	│   │   ├── rnn_experiments.py
-	│   │   └── xgboost_experiments.py
-	│   │
-	│   ├── models                            <- Models' implementation.
-	│   │
-	│   ├── preprocessing                     <- Preprocessing scripts for EDA, training and evaluation.
-	│   │   ├── __init__.py                   <- Makes preprocessing a Python module.
-	│   │   ├── bin_and_impute.py             <- Binning and imputation of time series' missing values.
-	│   │   ├── collect_records.py            <- ICU stays and patients' collection from different data files.
-	│   │   ├── main_preprocessing.py         <- Data generation and loading.
-	│   │   ├── rnn_preprocessing.py          <- Data padding, loading and label creation.
-	│   │   ├── xgboost_preprocessing.py      <- Variables transformation into their stats, loading and label creation.
-	│   │   └── util.py
-	│   │
-	│   ├── visualization                     <- Scripts to create exploratory and results oriented visualizations.
-	│   │   ├── __init__.py                   <- Makes visualization a Python module.
-	│   │   ├── plots.py                      <- Plots functions used in the project.
-	│
-	├── tests                                 <- pytest suite (synthetic-data smoke tests + pipeline tests).
-	│   ├── test_synthetic.py
-	│   ├── test_pipeline.py
-	│   └── test_gru.py                       <- GRU gradient check + sequence + training tests.
-	│   │   └── util.py 
-	│   │
-	│   ├── train_rnn.py
-	│   └── train_xgboost.py
-	│
-	└── requirements.txt                      <- Packages required to reproduce the project's working environment.
+```text
+├── configs/                              <- Experiment configuration files.
+├── data/synthetic/                       <- Seeded SYNTHETIC_* mock tables (see DATA.md).
+├── inflammation_risk_models/             <- Installable package.
+│   ├── synthetic_data.py                 <- Synthetic ICU cohort generator.
+│   ├── preprocessing.py                  <- Time-series statistics encoding and splits.
+│   ├── sequences.py                      <- Raw 48h sequence builder for the GRU path.
+│   ├── gru.py                            <- NumPy GRU classifier.
+│   ├── train.py                          <- CLI (`inflammation-train` / `python -m inflammation_risk_models.train`).
+│   ├── experiments/
+│   │   ├── rnn_experiments.py
+│   │   └── xgboost_experiments.py
+│   └── visualization/
+│       ├── plots.py
+│       └── util.py
+├── models/hyperparam_opt/xgboost/        <- Saved hyperparameter result tables.
+├── notebooks/
+│   ├── files_preview.ipynb
+│   ├── load_data_eda.ipynb
+│   ├── static_variables_eda.ipynb
+│   ├── time_series_eda.ipynb
+│   └── rnn.ipynb
+├── output/
+│   ├── rnn/
+│   └── xgboost/
+├── scripts/generate_synthetic_mimic.py   <- Regenerates data/synthetic/.
+├── tests/
+│   ├── test_synthetic.py
+│   ├── test_pipeline.py
+│   ├── test_gru.py
+│   └── test_mock_mimic.py
+├── DATA.md
+├── requirements.txt
+└── pyproject.toml
+```
 
 ## Related projects
 

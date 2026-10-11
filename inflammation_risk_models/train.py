@@ -1,15 +1,17 @@
 """End-to-end training for inflammation prediction on synthetic ICU data.
 
 Usage:
-    python src/train.py                      # synthetic data, default settings
-    python src/train.py --n-patients 1000 --seed 7
-    python src/train.py --model gru          # recurrent (GRU) path
-    python src/train.py --data-dir input/xgboost   # pre-extracted real data
+    inflammation-train
+    python -m inflammation_risk_models.train
+    python -m inflammation_risk_models.train --n-patients 1000 --seed 7
+    python -m inflammation_risk_models.train --model gru
+    python -m inflammation_risk_models.train --data-dir /path/to/cohort
 
 With --data-dir, the script expects a long-format parquet/csv with columns
-patient_id, hour, the 44 clinical variables (see src/synthetic_data.py),
-and onset_hour -- i.e. the same schema generate_cohort() produces. Without
-it, a synthetic cohort is generated on the fly (no credentials needed).
+patient_id, hour, the 44 clinical variables (see
+inflammation_risk_models/synthetic_data.py), and onset_hour -- i.e. the same
+schema generate_cohort() produces. Without it, a synthetic cohort is
+generated on the fly (no credentials needed).
 
 Two model families are supported:
 
@@ -18,10 +20,10 @@ Two model families are supported:
   observation window -- the same encoding documented in the README. Falls
   back to scikit-learn's GradientBoostingClassifier when xgboost is not
   installed.
-* ``gru``: a single-layer GRU (NumPy implementation in src/gru.py, no
-  deep-learning framework required) trained directly on the raw 48-hour
-  hourly sequences (forward-filled, median-imputed, z-scored with
-  training-set statistics).
+* ``gru``: a single-layer GRU (NumPy implementation in
+  inflammation_risk_models/gru.py, no deep-learning framework required)
+  trained directly on the raw 48-hour hourly sequences (forward-filled,
+  median-imputed, z-scored with training-set statistics).
 """
 
 from __future__ import annotations

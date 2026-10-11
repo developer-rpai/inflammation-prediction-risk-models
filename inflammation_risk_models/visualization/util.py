@@ -462,6 +462,22 @@ def get_bars_midde_top_points(fig):
     return bars_middle_top_points_x, bars_middle_top_points_y
 
 
+def _numeric_for_zscore(series):
+    '''Coerce a column to float for z-scoring, or return None when it cannot.'''
+    if pd.api.types.is_datetime64_any_dtype(series):
+        return None
+    if pd.api.types.is_timedelta64_dtype(series):
+        values = series.dt.total_seconds()
+    else:
+        try:
+            values = pd.to_numeric(series, errors='coerce')
+        except (TypeError, ValueError):
+            return None
+    if values.notna().sum() < 3 or values.nunique(dropna=True) < 2:
+        return None
+    return values.to_numpy(dtype=float)
+
+
 def remove_outliers(df, column):
     '''
     Removes the outliers from the dataframe.
@@ -478,7 +494,14 @@ def remove_outliers(df, column):
     pandas.DataFrame
         Dataframe without the outliers
     '''
-    return df[(np.abs(stats.zscore(df[column], nan_policy='omit')) < 3)]
+    values = _numeric_for_zscore(df[column])
+    if values is None:
+        return df
+    z = np.abs(stats.zscore(values, nan_policy='omit'))
+    keep = np.ones(len(df), dtype=bool)
+    valid = np.isfinite(z)
+    keep[valid] = z[valid] < 3
+    return df.loc[keep]
 
 
 def replace_outliers(df, column):
@@ -498,7 +521,14 @@ def replace_outliers(df, column):
         Dataframe without the outliers
     '''
     df_copy = df.copy()
-    df_copy[(np.abs(stats.zscore(df_copy[column], nan_policy='omit')) >= 3)] = np.nan
+    values = _numeric_for_zscore(df_copy[column])
+    if values is None:
+        return df_copy
+    z = np.abs(stats.zscore(values, nan_policy='omit'))
+    mask = np.zeros(len(df_copy), dtype=bool)
+    valid = np.isfinite(z)
+    mask[valid] = z[valid] >= 3
+    df_copy.loc[mask] = np.nan
     return df_copy
 
 
