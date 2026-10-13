@@ -178,3 +178,4 @@ The legacy experiment modules do not dispatch on a `tuning` or `test` argument. 
 
 * MIMIC-III and PhysioNet publications and website.
 * [MIT-LCP code for building MIMIC](https://github.com/MIT-LCP/mimic-code).
+* [sepsis-prediction by acampillos](https://github.com/acampillos/sepsis-prediction), an early MIMIC-III sepsis prediction implementation whose approach this work builds on.
