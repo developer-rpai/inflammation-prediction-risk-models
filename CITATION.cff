@@ -6,6 +6,8 @@ authors:
   - family-names: Pai
     given-names: Rakesh
 license: Apache-2.0
+doi: "10.5281/zenodo.23327692"
+version: "0.1.2"
 repository-code: "https://github.com/developer-rpai/inflammation-prediction-risk-models"
 keywords:
   - inflammation-prediction
