@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "inflammation-prediction-risk-models"
-version = "0.1.1"
+version = "0.1.2"
 description = "Early prediction of inflammation onset from ICU time series (XGBoost + GRU) with a synthetic-data pipeline."
 readme = "README.md"
 requires-python = ">=3.9"

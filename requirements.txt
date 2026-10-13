@@ -1,16 +1,16 @@
 # Synthetic-data pipeline (current): no credentials needed.
+# Requires Python >= 3.9.
 #   pip install -r requirements.txt
-#   python src/train.py
+#   python -m inflammation_risk_models.train
 pandas
 numpy
 scikit-learn
 xgboost
 pytest
 
-# Legacy MIMIC-III experiment stack (original 2022 pins, kept for reference).
-# The legacy scripts under src/experiments/ additionally reference training
-# modules (src.train_xgboost, src.train_rnn, src.models.rnn,
-# src.visualization.util) that were part of the original project setup.
+# Legacy MIMIC-III experiment modules (original 2022 pins, kept for reference).
+# inflammation_risk_models/experiments/ additionally references training
+# modules from the original project setup that are not part of this install.
 # bayesian_optimization==1.2.0
 # keras==2.9.0
 # matplotlib==3.5.2

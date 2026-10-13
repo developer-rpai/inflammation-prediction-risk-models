@@ -3,11 +3,10 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 import numpy as np
-from scipy import stats
 import random
 
 
-from .util import get_average_importances
+from .util import get_average_importances, remove_outliers
 
 
 # Static variables related
@@ -198,9 +197,9 @@ def plot_missing_values_per_column(df, show=True, save_path=None):
         ax = fig.add_subplot(Rows,Cols,Position[k])
         
         column = df.columns[k]
-        percent_missing = df[column].isnull().sum() * 100 / len(df)
+        percent_missing = float(df[column].isnull().mean())
         
-        ax.pie([percent_missing, 1-percent_missing], 
+        ax.pie([percent_missing, 1 - percent_missing], 
            labels = labels, 
            colors = colors, 
            autopct='%.2f%%', 
@@ -239,10 +238,10 @@ def plot_missing_values_pie_chart(df, column, title, show=True, save_path=None):
     labels = ['Missing values', 'Non missing values']
     explode = [0.1, 0.1]
     
-    percent_missing = df[column].isnull().sum() * 100 / len(df)
+    percent_missing = float(df[column].isnull().mean())
         
     fig, ax = plt.subplots(figsize=(4,5))
-    ax.pie([percent_missing, 1-percent_missing], 
+    ax.pie([percent_missing, 1 - percent_missing], 
            labels = labels, 
            colors = colors, 
            autopct='%.2f%%', 
@@ -331,24 +330,8 @@ def shared_displot(column, *args):
     plt.show()
 
 
-def remove_outliers(df, column):
-    '''
-    Removes outliers from a given column.
-    The column must be numeric.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Dataframe to clean
-    column : str
-        Column to clean
-    
-    Returns
-    -------
-    pandas.DataFrame
-        Cleaned dataframe
-    '''
-    return df[(np.abs(stats.zscore(df[column])) < 3)]
+# Historical notebooks import this name; the implementation is shared_displot.
+shared_histplot = shared_displot
 
 
 def correlation_matrix_heatmap(figsize, corr_matrix, vmin=-1, vmax=1, show=True, save_path=None):
@@ -427,7 +410,7 @@ def kdeplot_univariate_features(df, features, title):
     for col in features:
         print(col)
         fig = plt.figure(figsize=(9, 3))
-        sns.kdeplot(df[col], shade = True)
+        sns.kdeplot(df[col], fill=True)
         plt.title(title)
         plt.show()
         fig.clf()
@@ -458,9 +441,9 @@ def kdeplot_univariate_features_shared(df1, df2, df3, features, title):
     for feature in features:
         print(feature)
         fig = plt.figure(figsize=(9, 3))
-        sns.kdeplot(df1[feature], shade = False)
-        sns.kdeplot(df2[feature], shade = False)
-        sns.kdeplot(df3[feature], shade = False)
+        sns.kdeplot(df1[feature], fill=False)
+        sns.kdeplot(df2[feature], fill=False)
+        sns.kdeplot(df3[feature], fill=False)
         plt.title(title)
         plt.show()
         fig.clf()
@@ -558,7 +541,7 @@ def plot_features_kde_grid(df, features, show=True, save_path=None):
             else:
                 k=j
 
-            sns.kdeplot(df[features[k]], shade = True, ax=axes[j][i])
+            sns.kdeplot(df[features[k]], fill=True, ax=axes[j][i])
 
     if save_path:
         plt.savefig(save_path, bbox_inches='tight')
